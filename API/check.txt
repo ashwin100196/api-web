@@ -1,0 +1,35 @@
+def get_mainpage(request):
+	new_time = time.time()
+	old_time = new_time - 86400.0
+	temp_time = old_time
+	sum_time = 0.0
+	query = request.GET.get('query','not')
+	if query =='start':
+		cursor = alerts.find({"$and":[{"alert":"True"},{"timestamp":{"$gt":old_time,"$lt":new_time}}]})
+		count = cursor.count()
+		for Alert in cursor:
+			if Alert.condition == 'True':
+				sum_time += Alert.timestamp-temp_time
+				temp_time = Alert.timestamp
+			else:
+				temp_time = Alert.timestamp
+		Mainchart_percentage = sum_time/86400.0*100
+		person_detected = 0
+		hardhat_missing = 0
+		safetyglasses_missing = 0
+		cursor = alerts.find( {"alert":"True"},{"type":"person"} ).sort([("$natural" , -1)]).limit(1);
+		for Alert in cursor:
+			if Alert.condition=='True':
+				person_detected = 1
+		cursor = alerts.find( {"alert":"True"},{"type":"hardhat"} ).sort([("$natural" , -1)]).limit(1);
+		for Alert in cursor:
+			if Alert.condition=='True':
+				hardhat_missing = 1
+		cursor = alerts.find( {"alert":"True"},{"type":"safetyglasses"} ).sort([("$natural" , -1)]).limit(1);
+		for Alert in cursor:
+			if Alert.condition=='True':
+				safetyglasses_missing = 1
+		resp_data = {"Piechart":Mainchart_percentage,"person":person_detected,"hardhat":hardhat_missing,"safetyglasses":safetyglasses_missing,"query":query,"count":count}
+		return JsonResponse(resp_data)
+	else:
+		return HttpResponse(status=404)
